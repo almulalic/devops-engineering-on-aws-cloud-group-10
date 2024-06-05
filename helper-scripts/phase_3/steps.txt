@@ -1,0 +1,178 @@
+Steps that were taken to complete phase 3
+
+Description:
+In this phase, you will continue building. The objective is to separate the database and the web server infrastructure so that they run independently. 
+The web application should run on a separate virtual machine, and the database should run on the managed service infrastructure.
+
+
+
+Task 1: Changing the VPC configuration:
+
+Description:
+Update or re-create the virtual network components that are necessary to support hosting the database separately from the application.
+
+
+Solution:
+
+VPC Configuration:
+	- Create a new private subnet called 'eu-private-subnet-1a' in Availability Zone '1a':
+		- Add it to the 'example-university-vpc'
+		- Assign the '1a' Availability Zone relative to the Region
+		- Assign the 10.0.3.0/24 IPV4 address range
+	- Create another private subnet called 'eu-private-subnet-1b' in Availability Zone '1b':
+		- Add it to the 'example-university-vpc'
+		- Assign the 'x-1b' Availability Zone relative to the Region
+		- Assign the 10.0.4.0/24 IPV4 address range
+		
+	- Create a NAT Gateway called 'example-university-ngw':
+		- Select 'eu-public-subnet-1a' as Subnet
+		- Select 'Public' as Connectivity type
+		- Allocate Ellastic IP
+
+
+
+Task 2: Creating and configuring the Amazon RDS database
+
+Description:
+Create an Amazon Relational Database Service (Amazon RDS) database that runs a MySQL engine. You can choose to create a provisioned instance or run it serverlessly.
+
+
+Solution:
+
+Subnet Group Configuration:
+	- Create a subnet group called 'example-university-db-1-subnet-group'
+	- Add it to 'example-university-vpc'
+	- Add 2 Availability Zones that match the zones of Private Subnets
+	- Add the 'eu-private-subnet-1a' and 'ex-private-subnet-1b' as subnets
+
+VPC Configuration:
+	- Create a new security group called 'example-university-db-sg':
+		- Assign it to the 'example-university-vpc'
+		- Add inbound rule that will allow TCP MYSQL (3306) connection from the Security Group 'example-university-sg'
+
+RDS Configuration:
+	- Choose 'Standard Create'
+	- Choose 'MariaDB' as 'Engine Options'
+	- Set the 'Engine Version' to 'MariaDB 10.5.23' (for compatibility with AIO)
+	- Select the 'Free tier' template (in production env we would use something better)
+	- Name the instance 'example-university-db-1'
+	- Under 'Credentials Settings':
+		- Set 'nodeapp' as username
+		- Select 'Self Managed' Credentials managements
+		- Set 'student12' as Master password
+		- Select the 'db.t3.micro' instance type
+		- Select SSD as storage option and allocate 20 GB of storage
+		- Assign the 'example-university-db-1-subnet-group'
+		- Choose the Availability Zone with the letter 'a'
+		- Don't allow it public access
+		- Assign the 'example-university-db-sg' Security Group
+		- Choose the Password authentication option in Database authentication section
+
+
+
+Task 3: Configuring the development environment
+
+Description:
+Provision an AWS Cloud9 environment to run AWS Command Line Interface (AWS CLI) commands in later tasks.
+
+
+Solution:
+
+Cloud9 Configuration:
+	- Create a new environment called 'example-university-c9'
+	- Choose Create EC2 instance in the Environment type:
+		- Select 't2.micro' as Instance Type
+		- Select 'Amazon Linux 2023' as Platform
+		- Select '30 minutes' 
+	- Under network settings:
+		- 'Secure Shell (SSH)' as Connection
+		- Under VPC settings:
+		- Select the 'example-university-vpc' 
+		- Select 'No preference' as Subnet
+
+
+
+Task 4: Provisioning Secrets Manager
+
+Description:
+Use AWS Secrets Manager to create a secret to store the database credentials, and configure the web application to use Secrets Manager.
+
+
+Solution:
+
+Cloud9:
+	- Copy the 'Script-1' AWS CLI command from the 'cloud9-scripts' file and create a new shell script called 'create-db-secret.sh':
+		- In the 'secret string' set:
+			- 'user' to 'nodeapp'
+			- 'password' to 'student12'
+			- 'host' to 'example-university-db-1' host address
+			- 'db' to 'STUDENTS'
+		- Add the executable permission (+x)
+		- Execute the command
+		- Verify that the resource was created
+		- Either manually or via the 'verify-secrets-created.sh' script
+
+
+
+Task 5: Provisioning a new instance for the web server
+
+Description:
+Create a new virtual machine to host the web application.
+
+
+Solution:
+
+EC2 Configuration:
+	- Create a new EC2 App called 'example-university-app':
+		- Use the latest Ubuntu AMI
+		- Select the 't2.micro' instance type
+		- Create a new keypair for your user or reuse to vockey keypair
+		- Under network settings choose:
+			- 'example-university-vpc' as VPC
+			- 'eu-public-subnet-1a' as Subnet
+			- 'example-university-sg' as Security Group
+			- Enable elastic IP (So that the instance gets public IP)
+			- Associate the 'LabInstanceProfile' as instance profile (aws-sdk access)	
+			- Optionally add shutodwn and termination protection
+			- Paste the user data that is located inside of this folder (UserdataScript-phase-3.sh)
+		- Launch the instance and wait until it becomes active and until all checks pass
+
+
+
+Task 6: Migrating the database
+
+Description:
+Migrate the data from the original database, which is on an EC2 instance, to the new Amazon RDS database.
+
+
+Solution:
+
+Cloud9:
+	- Copy the 'Script-3' AWS CLI command from the 'cloud9-scripts' file and create a new shell script called 'migrate-data.sh':
+		- In the 'mysqldump' command:
+			- Change '<EC2instancePrivateip>' to the Private IP of the 'example-university-aio-app'
+			- In the 'mysql' command:
+				- Change '<RDSEndpoint>' to 'example-university-db-1' host address
+			- Add the executable permission (+x)
+			- Execute the command
+				- Provide passwords when prompted
+			- Verify that the 'data.sql' file is present and not empty 
+				- If you get issues with collation, delete them from SQL file and try again
+
+
+
+Task 7: Testing the application
+
+Description:
+Access the application and perform a few tasks to test it. For example, view, add, delete, and modify student records.
+
+
+Solution:
+	- Test the application on port 80 by visiting the public IP and/or public DNS that is listed in the Details panel:
+	- Test out the application that is loaded on port 80 by adding/editing/removing records
+	- Test the connection between EC2 and RDS
+	- Verify that RDS has no public access
+
+
+
+If the app is working in the same way as in phase 2, this phase can be marked as completed.
