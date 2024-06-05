@@ -1,0 +1,79 @@
+Steps that were taken to complete Phase 2:
+
+Description:
+In this phase, you will start to build the solution. The objective of this phase is to have a functional web application that works on a single virtual machine in a virtual network that you create. 
+By the end of this phase, you will have a POC to demonstrate hosting the application on the AWS Cloud. You can then build upon your work in later phases.
+
+
+
+Task 1: Creating a virtual network
+
+Description:
+In this phase, virtual network consists of 5 key services/subcomponents: VPC, Subnets, Route Tables, Internet Gateways and Security Groups
+
+
+Solution:
+
+VPC Configuration:
+	- Create a VPC called 'example-university-vpc':
+		- Assign the 10.0.0.0/16 IPV4 address range
+		- Enable DNS hostnames (so that the EC2 instances get DNS name)
+
+	- Create a public Subnet called 'eu-public-subnet-1a':
+		- Assign the '1a' Availability Zone relative to the Region
+		- Assign the 10.0.0.0/24 IPV4 address range
+		- Check that the Network ACL settings allow 'All traffic' on  'All' ports and 'All' protocols on 0.0.0.0/24 both on 'inbound' and 'outbound' rules
+
+	- Create a Internet Gateway called 'example-university-igw'
+		- Attach it to 'example-university-vpc'
+
+	- Create a Route Table called 'example-university-rtb'
+		- Add the 0.0.0.0/24 route and set it's target to 'example-university-igw'
+		- Check that the 'eu-public-subnet-1a' is selected
+
+	- Create a Security Group called 'example-university-app-sg'
+		- Assign it to the 'example-university-vpc'
+		- Add inbound rule that will allow TCP HTTP (80) connections from all 0.0.0.0/24 addresses on port 80 (this will allow our web app to have internet access)
+		- Add inbound rule that will allow TCP SSH (22) connections from the local IP of your computer (this will simplify debugging and will only be available to the current machine)
+		- Add inbound rule that will allow TCP MYSQL (3306) connection from inside the VPC address range 10.0.0.0/16 (this will be later used for migration)
+
+
+
+Task 2: Creating a virtual machine
+
+Description:
+Create a virtual machine in the cloud to host the web application.
+
+
+Solution:
+
+EC2 Configuration:
+	- Create a new EC2 App called 'example-university-aio-app' (aio = all in one):
+		- Use the latest Ubuntu AMI
+		- Select the 't2.micro' instance type
+		- Create a new keypair for your user or reuse to vockey keypair
+		- Under network settings choose:
+				- 'example-university-vpc' as VPC
+				- 'eu-public-subnet-1a' as Subnet
+				- 'example-university-sg' as Security Group
+				- Enable elastic IP (So that the instance gets public IP)
+				- Optionally add shutodwn and termination protection
+				- Paste the user data that is located inside of this folder (UserdataScript-phase-2.sh)
+		- Launch the instance and wait until it becomes active and until all checks pass
+
+
+
+Task 3: Testing the deployment
+
+Description:
+Test the deployment of the web application to ensure it is accessible from the internet and functional. Perform a few tasks, such as viewing, adding, deleting, or modifying records.
+
+
+Solution:
+	- Test the application on port 22 by trying to establish a SSH connection from your local machine
+	- Test the application on port 80 by visiting the public IP and/or public DNS that is listed in the Details panel:
+		- Test out the application that is loaded on port 80 by adding/editing/removing records
+
+
+
+If everything works, phase 2 can be marked as completed.
