@@ -1,0 +1,128 @@
+Steps that were taken to complete phase 4
+
+In this phase, you will complete the design and fulfill the remaining solution requirements. 
+The objective is to use the key components that you created in earlier phases to build a scalable and highly available architecture.
+
+
+
+Task 1: Creating an Application Load Balancer
+
+
+Description:
+Launch a load balancer. The endpoint will be used to access your web application.
+
+
+Solution:
+
+VPC Configuration:
+	- Create a security group called 'example-university-lb-sg':
+		- Add inbound rule that will allow HTTP  (80) connection from Anywhere
+		- Add inbound rule that will allow HTTPS (443) connection from Anywhere
+	
+	- Create a new Security Group called 'example-university-app-instance-sg':
+		- Add inbound rule that will allow HTTP  (80) traffic from the Load Balancers Security Group 'example-university-lb-sg'
+		- Add inbound rule that will allow HTTPS (443) traffic from the Load Balancers Security Group 'example-university-lb-sg'
+	
+	- Modify the existing Security Group called 'example-university-db-sg':
+		- Add inbound rule that will allow MYSQL (3306) from the 'example-university-app-instance-sg' Security Group
+
+EC2 Configuration:
+	- Create a new Target Group called 'example-university-tg':
+		- Select 'Instance' as Target type
+		- Set HTTP as Protocol and 80 as Port
+		- Select IPv4 as IP address type
+		- Select 'example-university-vpc' as VPC
+		- Select HTTP1 as Protocol version
+		- In Advanced health check settings:
+			- Set 2 as Healthy threshold
+			- Set 10 as Interval
+		- In the Register targets:
+			- If you already have instances set up, select them and click 'Include as pending below'
+			- If you don't, skip this step
+
+	- Create a new Load Balancer called 'example-university-lb':
+		- Select 'Internet-Facing' as Scheme
+		- Select 'IPv4' as IP address type
+		- Select 'example-university-vpc' as VPC
+		- Add mappings in at least 2 Availability Zones
+		- Assign the 'example-university-lb-sg' as Security Group
+		- Select the 'example-university-tg' as Listener on Protocol HTTP on Port 80
+
+
+
+Task 2: Implementing Amazon EC2 Auto Scaling
+
+Description:
+Create a new launch template, and use an Auto Scaling group to launch the EC2 instances that host the web application.
+
+
+Solution:
+
+EC2 Configuration:
+	- Create a new AMI Image called 'example-university-app-ami':
+		- In the EC2 Instances dashboard select the 'example-university-app' instance
+		- In the actions menu go to Image and templates and select Create Image
+		- Set the Description to 'Example university app AMI'
+
+	- Create a new Launch Template called 'example-university-lt':
+		- Set the Description to 'Example university launch template'
+		- Select the 'Provide guidance to help me set up a template that I can use with EC2 Auto Scaling' option
+		- Under My AMIs select the 'example-university-app-ami'
+		- Select 't2.micro' as Instance type
+		- Select the default Key pair
+		- Under Network settings select the 'example-university-app-instance-sg' Security Group
+		- Under Advanced details:
+			- Select 'LabInstanceProfile' as IAM instance profile
+			- Select 'Enabled' as Detailed CloudWatch monitoring
+			- Paste the user data that is located inside of this folder (UserdataScript-phase-3.sh)
+
+	- Create a new Auto Scaling Group called 'example-university-asg':
+		- Select the 'example-university-lt' as Launch template
+		- Select the 'example-university-vpc' as VPC
+		- Select the 'eu-private-subnet-1a' and 'eu-private-subnet-2b' as Subnets
+		- Select Attach to existing load balancer and select the 'example-university-lb'
+		- Select the No VPC Lattice service
+		- Set '90' as the Health check grace period
+		- Select Enable group metrics collection within CloudWatch
+		- Set '2' as Desired capacity
+		- Set '2' both on Min desired capacity and Max desired capacity
+		- Select 'No automatic scaling' for Automatic Scaling
+		- Select 'No policy' for Instance maintenance policy
+		- Optionally fill in the tags and notifications section
+
+
+
+Task 3: Accessing the application
+
+Description:
+Access the application and perform a few tasks to test it. For example, view, add, delete, and modify student records.
+
+
+Solution:
+	- Test the application on port 80 by visiting the public IP and/or public DNS that is listed in the Load balancer settings
+	- Test out the application that is loaded on by adding/editing/removing records
+	- Test the connection between EC2 and RDS
+	- Verify that private access is enforced
+	- Veryif that subnet groups give minimal needed access
+
+
+
+Task 4: Load testing the application
+
+Description:
+Perform a load test on the application to monitor scaling. 
+
+
+Solution:
+
+Cloud9:
+	- Use the provided 'Script-2' from the 'cloud9-scripts' yaml file
+	- Extract it's content in a bash file called 'run-load-test.sh'
+	- Repalce the '<<ELB_URL>>' placeholder with the Load Balancer IP/DNS name
+	- Add the executable permission (+x)
+	- Run it
+
+
+
+If the app is working in the same way as in phase 2, this phase can be marked as completed.
+

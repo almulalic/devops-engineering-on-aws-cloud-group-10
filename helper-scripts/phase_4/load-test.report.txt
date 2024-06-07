@@ -1,0 +1,18 @@
+Target URL:          http://example-university-lb-1702021592.us-east-1.elb.amazonaws.com/
+Max time (s):        10
+Target rps:          1000
+Concurrent clients:  92
+Agent:               keepalive
+
+Completed requests:  9998
+Total errors:        0
+Total time:          10.001 s
+Mean latency:        11.3 ms
+Effective rps:       1000
+
+Percentage of requests served within a certain time
+  50%      2 ms
+  90%      27 ms
+  95%      34 ms
+  99%      151 ms
+ 100%      724 ms (longest request)
